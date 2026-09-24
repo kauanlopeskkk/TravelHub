@@ -1,20 +1,17 @@
-
+import React from 'react';
 import './App.css'
 
 function App() {
+return(
+    <div>
 
-const [destinos, ]
-
-
- <div>
-
-  <h1>TravelHub 🌎</h1>
-
-  {desti}
+<h1>Ola galerA</h1>
+<p>Portugal e gay</p>
+    
 
 
-
- </div>
+    </div>
+)
 
   
 

@@ -1,22 +1,17 @@
-from fastapi import FastAPI
+from typing import List
+
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+
+from database import SessionLocal, get_db, init_db
+from models import Destino as DestinoDB
+from schemas import DestinoOut
 
 app = FastAPI(title="TravelHub API", version="0.1.0")
 
-# Exemplo temporário de dados (vai para o banco quando você tiver database).
-# Formato: id, cidade, pais, Avaliacao
-destinos = [
-    {
-        "id": 1232323,
-        "cidade": "Paris",
-        "pais": "França",
-        "Avaliacao": 5,
-    }
-]
-
 app.add_middleware(
     CORSMiddleware,
-    # Se seu frontend rodar em outra URL/host, ajuste aqui.
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
@@ -24,21 +19,32 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+def startup() -> None:
+    init_db()
+
+    # Seed simples pra /destinos já mostrar algo sem você inserir manualmente.
+    db = SessionLocal()
+    try:
+        if db.query(DestinoDB).count() == 0:
+            db.add_all(
+                [
+                    DestinoDB(cidade="Paris", pais="França", avaliacao=5),
+                    DestinoDB(cidade="Lisboa", pais="Portugal", avaliacao=4),
+                    DestinoDB(cidade="Tóquio", pais="Japão", avaliacao=5),
+                    DestinoDB(cidade="Recife", pais="Brasil", avaliacao=5),
+                ]
+            )
+            db.commit()
+    finally:
+        db.close()
+
+
 @app.get("/health")
 def health_check():
-    return {
-        "status": "ok",
-        "message": "Bem-vindo ao TravelHub API."
-    }
+    return {"status": "ok"}
 
 
-@app.get("/destinos")
-def listar_destinos():
-    return destinos
-
-
-# Quando você criar rotas reais em back-end/routes/__init__.py (um `router`),
-# a gente inclui aqui:
-#
-# from routes import router as api_router
-# app.include_router(api_router, prefix="/api")
+@app.get("/destinos", response_model=List[DestinoOut])
+def listar_destinos(db: Session = Depends(get_db)):
+    return db.query(DestinoDB).all()
